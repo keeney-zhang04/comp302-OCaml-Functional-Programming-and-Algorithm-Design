@@ -1,0 +1,78 @@
+(* TODO: Add test cases for both Question 1 and 2. *)
+let rec backtrack vars assignment formula =
+  match vars with
+  | [] -> if eval assignment formula then assignment else raise Unsatisfiable_formula
+  | v :: vs ->
+      (* Try assigning true to v *)
+      (try backtrack vs (Variable_map.add v true assignment) formula with Unsatisfiable_formula ->
+        (* If assigning true fails, try false *)
+         backtrack vs (Variable_map.add v false assignment) formula)
+      
+let xy_truth_asgn : truth_assignment = Variable_map.empty
+                                       |> Variable_map.add       "x" true
+                                       |> Variable_map.add       "y" false
+let xyz_truth_asgn : truth_assignment =  Variable_map.empty
+                                         |> Variable_map.add       "x" true
+                                         |> Variable_map.add       "y" false
+                                         |> Variable_map.add       "z" false
+
+let asgn_x_true_y_false = Variable_map.empty
+                          |> Variable_map.add "x" true
+                          |> Variable_map.add "y" false
+
+let asgn_x_true_y_true = Variable_map.empty
+                         |> Variable_map.add "x" true
+                         |> Variable_map.add "y" true
+
+                           
+
+let find_sat_assignment_tests : (formula * truth_assignment option) list = [
+  (parse_formula "x & ~x", None);
+
+  (parse_formula "(y | z) & ~z",
+   Some (
+     Variable_map.empty
+     |> Variable_map.add "y" true
+     |> Variable_map.add "z" false
+   ));
+  
+  (parse_formula "x & ~y", Some xy_truth_asgn);
+  
+  (parse_formula "x & ~y | z", Some xyz_truth_asgn);
+  
+  (parse_formula "((z & z) | (y | w)) & (~x & ~((x & w)))",
+   Some (
+     Variable_map.empty
+     |> Variable_map.add "w" true
+     |> Variable_map.add "x" false
+     |> Variable_map.add "y" true
+     |> Variable_map.add "z" true
+   )) 
+]
+
+
+(* Question 1 *)
+(*----------------------------------------*)
+let find_sat_assignment_exc (formula : formula) : truth_assignment =
+  let vars = collect_variables formula in
+  backtrack vars Variable_map.empty formula 
+
+(* Question 2 *)
+(*----------------------------------------*)
+
+(* TODO: Implement the function. *)
+let rec backtrack_cps vars assignment formula return fail =
+  match vars with
+  | [] ->
+      if eval assignment formula then
+        return assignment
+      else
+        fail ()
+  | v :: vs ->
+      backtrack_cps vs (Variable_map.add v true assignment) formula return (fun () ->
+          backtrack_cps vs (Variable_map.add v false assignment) formula return fail)
+
+let rec find_sat_assignment_cps (formula : formula)
+    (return : truth_assignment -> 'r) (fail : unit -> 'r) : 'r =
+  let vars = collect_variables formula in
+  backtrack_cps vars Variable_map.empty formula return fail
